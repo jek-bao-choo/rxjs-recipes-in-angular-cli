@@ -138,11 +138,18 @@ import 'rxjs/add/operator/zipAll';
 export class AppComponent implements OnInit {
     title = 'app works!';
     obs = Observable.of(1, 2, 3, 4);
+    array = [0, 1, 2, 3, 4, 5];
 
     ngOnInit() {
-        this.howToHandleErrorV1();
-        this.howToHandleErrorV2();
-        this.howToUseRetry();
+        // this.howToHandleErrorV1();
+        // this.howToHandleErrorV2();
+        // this.howToUseRetry();
+        // this.usingMap();
+        // this.usingMapToMakeInnerObservable();
+        // this.usingMapAndMergeAll();
+        // this.usingFlatMap();
+        // this.transformArray();
+        this.setArrayToObservableThenTransform();
     }
 
 
@@ -213,5 +220,99 @@ export class AppComponent implements OnInit {
                 () => console.log('done completed')
             );
     }
+
+    usingMap() {
+        this.obs
+            .map(x => x * 2) // transform the input by multiple of 2
+            .subscribe(
+                x => console.log(x),
+                err => console.error(err),
+                () => console.log('done completed')
+            );
+    }
+
+    usingMapToMakeInnerObservable() {
+        this.obs
+            .map(x => Observable.timer(500).map(() => x + 3)) // transform the input wrapping it with another observable and addition of 3
+            //.map(x => Observable.timer(500).map((x) => x + 3)) // !!! REMEMBER Not the same as the immediate above
+            .subscribe(
+                x => console.log(x),
+                err => console.error(err),
+                () => console.log('done completed')
+            );
+    }
+
+    // Map and Merge all is the same as just one FlatMap
+    usingMapAndMergeAll() {
+        this.obs
+            .map(x => Observable.timer(500).map(() => x + 3)) // transform the input wrapping it with another observable and addition of 3
+            .mergeAll()
+            .subscribe(
+                x => console.log(x),
+                err => console.error(err),
+                () => console.log('done completed')
+            );
+    }
+
+    // Flat map is the same as map then merge all
+    // transform the items emitted by an Observable into Observables, then flatten the emissions from those into a single Observable
+    usingFlatMap() {
+        this.obs
+            .flatMap(x => Observable.timer(500).map(() => x + 10)) // transform the input wrapping it with another observable and addition of 10
+            .subscribe(
+                x => console.log(x),
+                err => console.error(err),
+                () => console.log('done completed')
+            );
+    }
+
+    /*
+    * This keeps creating new array. It is good that it creates new array of arr for immutability.
+    * But it's bad because there is clean up and resource intensive for mobile
+    * */
+    transformArray() {
+        let result = this.array
+            .filter(( x, i, arr ) => {
+                console.log('filtering ' + x);
+                console.log('is the source array ' + (arr === this.array));
+                return x % 2 === 0;
+            })
+            .map(( x, i, arr ) => {
+                console.log('mapping ' + x);
+                console.log('is the source array ' + (arr === this.array));
+                return x + '!';
+            })
+            .reduce(( r, x, i, arr ) => {
+                console.log('reducing ' + x);
+                return r + x;
+            }, '--');
+
+        console.log(result);
+    }
+
+    /*
+    * This is more efficient for resource management because it linearly scans and discard when not right
+    * */
+    setArrayToObservableThenTransform() {
+        let obsArray = Observable.from(this.array); // Use Observable.from() instead of Observable.of()
+        obsArray
+            .filter(( x: any ) => {
+                console.log('filtering ' + x);
+                return x % 2 === 0;
+            })
+            .map(( x ) => {
+                console.log('mapping ' + x);
+                return x + '!';
+            })
+            .reduce(( r, x ) => {
+                console.log('reducing ' + x);
+                return r + x;
+            }, '--')
+            .subscribe(
+                x => console.log(x)
+            );
+    }
+
+
 
 }
