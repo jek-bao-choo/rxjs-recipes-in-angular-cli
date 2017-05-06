@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 
 import { Observable } from 'rxjs/Observable';
+import { Subject } from 'rxjs/Subject';
+import { BehaviorSubject } from "rxjs/BehaviorSubject";
 
 import 'rxjs/add/observable/bindCallback';
 import 'rxjs/add/observable/bindNodeCallback';
@@ -130,6 +132,7 @@ import 'rxjs/add/operator/withLatestFrom';
 import 'rxjs/add/operator/zip';
 import 'rxjs/add/operator/zipAll';
 
+
 @Component({
     selector: 'app-root',
     templateUrl: './app.component.html',
@@ -140,6 +143,15 @@ export class AppComponent implements OnInit {
     obs = Observable.of(1, 2, 3, 4);
     array = [0, 1, 2, 3, 4, 5];
 
+    // create subject
+    // there is no need for initial value
+    subject = new Subject<boolean>();
+
+    // create behaviorSubject which require initial value
+    // true is an initial value. if there is a subscription
+    // after this, it would get true value immediately
+    behaviorSubject = new BehaviorSubject<boolean>(true);
+
     ngOnInit() {
         // this.howToHandleErrorV1();
         // this.howToHandleErrorV2();
@@ -149,7 +161,14 @@ export class AppComponent implements OnInit {
         // this.usingMapAndMergeAll();
         // this.usingFlatMap();
         // this.transformArray();
-        this.setArrayToObservableThenTransform();
+        // this.setArrayToObservableThenTransform();
+        // this.reduceArray();
+        // this.reduceObservableArray();
+        // this.reduceObservableArray_Abstract2();
+        // this.scanObservableArray();
+        // this.subject.next(false); /* Subscription wont get anything at this point before the subscribeSubject() */
+        // this.subscribeSubject();
+        // this.subscribeBehaviorSubject();
     }
 
 
@@ -313,6 +332,105 @@ export class AppComponent implements OnInit {
             );
     }
 
+    /*
+    * This is the same as reduceObservableArray()
+    * */
+    reduceArray() {
+        let result = this.array.reduce(
+            (accumulator, currentValue) => accumulator + currentValue, 3
+        ); // 3 is the init value.
+        console.log('reduceArray ' + result); // output 18 => 3 + (0 ... 5)
+    }
 
+    /*
+    * This is the same as reduceArray()
+    * But this waits for all the arrays to finish emitting before reducing them to one single number
+    * See the next method to understand better
+    * */
+    reduceObservableArray() {
+        let obsArray = Observable.from(this.array);
+        obsArray.reduce(
+            (accumulator, currentValue) => accumulator + currentValue, 3
+        ).subscribe(
+            val => console.log('reduceObservableArray ' + val)
+        );
+    }
+
+    /*
+    * The exact same reduce function/method as of reduceObserableArray() above
+    * This proves that it waits for all 6 numbers to come in then reduce them
+    * */
+    reduceObservableArray_Abstract2() {
+        let obsArray = Observable.interval(1000).take(6); //emits 6 times of 0, 1, 2, 3, 4, 5
+        obsArray.reduce(
+            (accumulator, currentValue) => accumulator + currentValue, 3
+        ).subscribe(
+            val => console.log('reduceObservableArray_Abstract2 ' + val)
+        );
+    }
+
+    /*
+    * This is the same as the above reduceObserableArray_Abstract2()
+    * except this is using scan instead of reduce which produces result at each emission
+    * */
+    scanObservableArray() {
+        let obsArray = Observable.interval(1000).take(6); //emits 6 times of 0, 1, 2, 3, 4, 5
+        obsArray.scan(
+            (accumulator, currentValue) => accumulator + currentValue, 3
+        ).subscribe(
+            val => console.log('scanObservableArray() ' + val)
+        );
+    }
+
+    /*
+    * Push the next val into the behavior subject
+    * */
+    nextSubject(val: boolean) {
+        this.subject.next(val);
+    }
+
+    /*
+    * Any values push into the subject would not be can shown
+    * before this subscribeSubject() is called
+    * */
+    subscribeSubject() {
+        this.subject
+            //.take(1) //when we include .take(1) we will have a complete. Without this it will continue subscribing
+            .subscribe(
+                val => console.log(val),
+                err => console.error(err),
+                () => console.log('completed')
+            );
+    }
+
+    /*
+    * This is the proper way to return a subject as observable
+    * */
+    getSubject(): Observable<boolean> {
+        return this.subject.asObservable();
+    }
+
+    /*
+     * Push the next val into the behavior subject
+     * */
+    nextBehaviorSubject(val: boolean) {
+        this.behaviorSubject.next(val);
+    }
+
+    /*
+    * For angular Behavior subject for a data service as a angular service often initializes
+    * before component and behavior subject ensures that the component consuming the
+    * service receives the last updated data even if there are no new
+    * updates since the component's subscription to this data.
+    * */
+    subscribeBehaviorSubject() {
+        this.behaviorSubject
+            // .first()
+            .subscribe(
+                val => console.log(val),
+                err => console.error(err),
+                () => console.log('completed')
+            );
+    }
 
 }
