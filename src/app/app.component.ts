@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 
 import { Observable } from 'rxjs/Observable';
 import { Subject } from 'rxjs/Subject';
-import { BehaviorSubject } from "rxjs/BehaviorSubject";
+import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 
 import 'rxjs/add/observable/bindCallback';
 import 'rxjs/add/observable/bindNodeCallback';
@@ -169,6 +169,12 @@ export class AppComponent implements OnInit {
         // this.subject.next(false); /* Subscription wont get anything at this point before the subscribeSubject() */
         // this.subscribeSubject();
         // this.subscribeBehaviorSubject();
+        // this.mergeObservable();
+        // this.mergeObservableAndThrowError();
+        // this.mergeObservableAndErrorResumeNext();
+        // this.mergeObservableAndErrorCatch();
+        // this.coldObservable();
+        // this.hotObservable();
     }
 
 
@@ -239,6 +245,84 @@ export class AppComponent implements OnInit {
                 () => console.log('done completed')
             );
     }
+
+
+    /*
+     * Using observable merge operator
+     * */
+    mergeObservableAndThrowError() {
+        let mergedObs = Observable.merge(
+            this.obs, //1, 2, 3, 4
+            Observable.throw('Stop Error'),
+            Observable.from(this.array), //0, 1, 2, 3, 4, 5
+            Observable.of(999) //999,
+        );
+
+        mergedObs.subscribe(
+            val => console.log(val), //this should show 1, 2, 3, 4, Stop Error
+            error => console.log(error),
+            () => console.log("completed")
+        );
+    }
+
+
+    /*
+     * Using observable onErrorResumeNext just like merge operator
+     * */
+    mergeObservableAndErrorResumeNext() {
+        let mergedObs = Observable.onErrorResumeNext(
+            this.obs, //1, 2, 3, 4
+            Observable.throw('Stop Error'),
+            Observable.from(this.array), //0, 1, 2, 3, 4, 5
+            Observable.of(999) //999,
+        );
+
+        mergedObs.subscribe(
+            val => console.log(val), //this should show 1, 2, 3, 4, 0, 1, 2, 3, 4, 5, 999
+            error => console.log(error),
+            () => console.log("completed")
+        );
+    }
+
+    /*
+     * Using observable merge operator and catch
+     * */
+    mergeObservableAndErrorCatch() {
+        let mergedObs = Observable.merge(
+            this.obs, //1, 2, 3, 4
+            Observable.throw('Stop Error'),
+            Observable.from(this.array), //0, 1, 2, 3, 4, 5
+            Observable.of(999) //999,
+        ).catch(e => {
+            console.log(e);
+            return Observable.of('catch error here');
+        });
+
+        mergedObs.subscribe(
+            val => console.log(val), //this should show 1, 2, 3, 4, Stop Error, Catch Error Here
+            error => console.log(error),
+            () => console.log("completed")
+        );
+    }
+
+
+    /*
+     * Using observable merge operator
+     * */
+    mergeObservable() {
+        let mergedObs = Observable.merge(
+            this.obs, //1, 2, 3, 4
+            Observable.from(this.array), //0, 1, 2, 3, 4, 5
+            Observable.of(999) //999,
+        );
+
+        mergedObs.subscribe(
+            val => console.log(val), //this should show 1, 2, 3, 4, 0, 1, 2, 3, 4, 5, 999
+            error => console.log(error),
+            () => console.log("completed")
+        );
+    }
+
 
     usingMap() {
         this.obs
@@ -432,5 +516,30 @@ export class AppComponent implements OnInit {
                 () => console.log('completed')
             );
     }
+
+
+    /*
+    * cold observable is like a recast of video
+    * */
+    coldObservable() {
+        let incrementalObs = Observable.interval(1000).take(10).map(x => x + 1);
+        incrementalObs.subscribe(val => console.log('a: ' + val));
+        setTimeout(function() {
+            incrementalObs.subscribe(val => console.log('      b: ' + val));
+        }, 4500);
+    }
+
+
+    /*
+    * hot observable is like watching a live video
+    * */
+    hotObservable() {
+        let incrementalObs = Observable.interval(1000).take(10).map(x => x + 1).publish().refCount(); //can also use .share()
+        incrementalObs.subscribe(val => console.log('a: ' + val));
+        setTimeout(function() {
+            incrementalObs.subscribe(val => console.log('      b: ' + val));
+        }, 4500);
+    }
+
 
 }
