@@ -4,6 +4,8 @@ import { Observable } from 'rxjs/Observable';
 import { Subject } from 'rxjs/Subject';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 
+import { Subscription } from 'rxjs/Subscription';
+
 import 'rxjs/add/observable/bindCallback';
 import 'rxjs/add/observable/bindNodeCallback';
 import 'rxjs/add/observable/combineLatest';
@@ -140,7 +142,11 @@ import 'rxjs/add/operator/zipAll';
 })
 export class AppComponent implements OnInit {
     title = 'app works!';
+
+    //create observables
     obs = Observable.of(1, 2, 3, 4);
+
+    //create array. This array will be made into observable in one of the code function below
     array = [0, 1, 2, 3, 4, 5];
 
     // create subject
@@ -151,6 +157,12 @@ export class AppComponent implements OnInit {
     // true is an initial value. if there is a subscription
     // after this, it would get true value immediately
     behaviorSubject = new BehaviorSubject<boolean>(true);
+
+    // subscription is created when an observable is being subscribed
+    subscription: Subscription;
+
+    // boolean variable for showing stop observable using takeWhile operator
+    isTrue: boolean = true;
 
     ngOnInit() {
         // this.howToHandleErrorV1();
@@ -175,6 +187,8 @@ export class AppComponent implements OnInit {
         // this.mergeObservableAndErrorCatch();
         // this.coldObservable();
         // this.hotObservable();
+        // this.basicInterval();
+        // this.usingFinallyOperator();
     }
 
 
@@ -324,6 +338,10 @@ export class AppComponent implements OnInit {
     }
 
 
+    /*
+    * Basic example of using map
+    * Use Case: for most of Angular version > 2+ we use this after making a http call to map to e.g. res.json();
+    * */
     usingMap() {
         this.obs
             .map(x => x * 2) // transform the input by multiple of 2
@@ -334,6 +352,10 @@ export class AppComponent implements OnInit {
             );
     }
 
+    /*
+    * As the name described using map to make inner observable
+    * Use Case: ?
+    * */
     usingMapToMakeInnerObservable() {
         this.obs
             .map(x => Observable.timer(500).map(() => x + 3)) // transform the input wrapping it with another observable and addition of 3
@@ -345,7 +367,10 @@ export class AppComponent implements OnInit {
             );
     }
 
-    // Map and Merge all is the same as just one FlatMap
+    /*
+    * Map and Merge all is the same as just one FlatMap
+    * Use Case: ?
+    * */
     usingMapAndMergeAll() {
         this.obs
             .map(x => Observable.timer(500).map(() => x + 3)) // transform the input wrapping it with another observable and addition of 3
@@ -357,8 +382,11 @@ export class AppComponent implements OnInit {
             );
     }
 
-    // Flat map is the same as map then merge all
-    // transform the items emitted by an Observable into Observables, then flatten the emissions from those into a single Observable
+    /*
+    * Flat map is the same as map then merge all
+    * transform the items emitted by an Observable into Observables, then flatten the emissions from those into a single Observable
+    * Use Case: ?
+    * */
     usingFlatMap() {
         this.obs
             .flatMap(x => Observable.timer(500).map(() => x + 10)) // transform the input wrapping it with another observable and addition of 10
@@ -372,6 +400,7 @@ export class AppComponent implements OnInit {
     /*
     * This keeps creating new array. It is good that it creates new array of arr for immutability.
     * But it's bad because there is clean up and resource intensive for mobile
+    * Use Case: ?
     * */
     transformArray() {
         let result = this.array
@@ -395,6 +424,7 @@ export class AppComponent implements OnInit {
 
     /*
     * This is more efficient for resource management because it linearly scans and discard when not right
+    * Use Case: ?
     * */
     setArrayToObservableThenTransform() {
         let obsArray = Observable.from(this.array); // Use Observable.from() instead of Observable.of()
@@ -418,6 +448,7 @@ export class AppComponent implements OnInit {
 
     /*
     * This is the same as reduceObservableArray()
+    * Use Case: We want to sum questionnaire score
     * */
     reduceArray() {
         let result = this.array.reduce(
@@ -430,9 +461,10 @@ export class AppComponent implements OnInit {
     * This is the same as reduceArray()
     * But this waits for all the arrays to finish emitting before reducing them to one single number
     * See the next method to understand better
+    * Use Case: We want to sum questionnaire score
     * */
     reduceObservableArray() {
-        let obsArray = Observable.from(this.array);
+        let obsArray = Observable.from(this.array); //Make an array object into Observable
         obsArray.reduce(
             (accumulator, currentValue) => accumulator + currentValue, 3
         ).subscribe(
@@ -443,6 +475,7 @@ export class AppComponent implements OnInit {
     /*
     * The exact same reduce function/method as of reduceObserableArray() above
     * This proves that it waits for all 6 numbers to come in then reduce them
+    * Use Case: ?
     * */
     reduceObservableArray_Abstract2() {
         let obsArray = Observable.interval(1000).take(6); //emits 6 times of 0, 1, 2, 3, 4, 5
@@ -456,6 +489,7 @@ export class AppComponent implements OnInit {
     /*
     * This is the same as the above reduceObserableArray_Abstract2()
     * except this is using scan instead of reduce which produces result at each emission
+    * Use Case: ?
     * */
     scanObservableArray() {
         let obsArray = Observable.interval(1000).take(6); //emits 6 times of 0, 1, 2, 3, 4, 5
@@ -506,6 +540,7 @@ export class AppComponent implements OnInit {
     * before component and behavior subject ensures that the component consuming the
     * service receives the last updated data even if there are no new
     * updates since the component's subscription to this data.
+    * Use Case: ?
     * */
     subscribeBehaviorSubject() {
         this.behaviorSubject
@@ -520,6 +555,7 @@ export class AppComponent implements OnInit {
 
     /*
     * cold observable is like a recast of video
+    * Use Case: Normal default every day use
     * */
     coldObservable() {
         let incrementalObs = Observable.interval(1000).take(10).map(x => x + 1);
@@ -532,14 +568,88 @@ export class AppComponent implements OnInit {
 
     /*
     * hot observable is like watching a live video
+    * Use Case: When we want to async pipe a few times yet only want a single subscription
     * */
     hotObservable() {
-        let incrementalObs = Observable.interval(1000).take(10).map(x => x + 1).publish().refCount(); //can also use .share()
+        let incrementalObs = Observable.interval(1000).take(10)
+            .map(x => x + 1)
+            .publish().refCount(); //can also use .share()
         incrementalObs.subscribe(val => console.log('a: ' + val));
         setTimeout(function() {
             incrementalObs.subscribe(val => console.log('      b: ' + val));
         }, 4500);
     }
 
+    /*
+    * basic interval can be used as delay too
+    * Imagine Gmail allows you to send and undo send within 4 seconds of sending
+    * Use Case: Perform an action 8 seconds later then intercept if user choose to undo the action
+    * */
+    basicInterval() {
+        let undoInSeconds: number = 8;
+        this.subscription = Observable
+                .interval(1000)
+                .take(undoInSeconds)
+                .takeWhile(() => this.isTrue)
+                .subscribe(
+                    (val: number) => {
+                        console.log(`${val + 1} seconds...         UNDO`);
+                        ( val === (undoInSeconds - 1) ) ? console.log('Email sent / Action performed') : null;
+                    }
+                );
+    }
+
+    /*
+    * This is to stop observable from continuing performance
+    * Use Case: Stop observable from running like how Gmail could undo email being sent
+    * */
+    stopObservableUsingUnsubscribe() {
+        if (!!this.subscription) {
+            this.subscription.unsubscribe();
+            console.log('subscription: Subscription is unsubscribed');
+        }
+    }
+
+    /*
+    * This is also to stop observable from continuing performance
+    * This method is more preferable than subscribing method then unsubscribe
+     * Use Case: Stop observable from running like how Gmail could undo email being sent
+    * */
+    stopObservableUsingTakeWhile() {
+        this.isTrue = false;
+    }
+
+    /*
+    * Imagine the classic Java approach of try, catch, and finally
+    * Use Case: Always do an action with finally despite it's success or error such as Closing A Modal/Dialog whether it is success or error
+    * */
+    usingFinallyOperator() {
+        Observable
+            .interval(500)
+            .take(4)
+            .finally(() => console.log('It is the end of the observable emission, Hello World'))
+            .subscribe(
+                val => console.log('count taker ' + val)
+            );
+    }
+
+    /*
+    * For this one more use the visualisation available at https://rxviz.com/examples/higher-order-observable
+    * The author did a great job
+    * Use Case: ? perhaps for grouping but I am still having a bit of problem understanding how to use for grouping
+    * */
+    usingHigherOrderObservable() {
+        Observable
+            .interval(1000)
+            .groupBy(n => n % 2);
+    }
+
+    /*
+    * Courtsey of https://rxviz.com/examples/custom-operator
+    * Use Case: ?
+    * */
+    createCustomOperator() {
+        // haven't work on this yet. Work In Progress :)
+    }
 
 }
